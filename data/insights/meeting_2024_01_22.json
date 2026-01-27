@@ -1,0 +1,62 @@
+{
+  "filename": "meeting_2024_01_22.txt",
+  "date": "2026-01-23T11:14:25.622183",
+  "file_type": ".txt",
+  "character_count": 3749,
+  "word_count": 558,
+  "summary": "The Q1 2024 product roadmap review discussed customer feedback, feature prioritization, and technical capabilities. The team agreed on the priority order for Q1 features and identified opportunities for growth. Risks and concerns were also discussed, including technical and market risks.",
+  "topics": [
+    "Product Roadmap",
+    "Customer Feedback",
+    "Feature Prioritization",
+    "Technical Capabilities",
+    "Enterprise Integration",
+    "Analytics Dashboard",
+    "Mobile App",
+    "Salesforce Integration",
+    "HubSpot Integration"
+  ],
+  "risks": [
+    "Technical risk: database architecture may not scale well for real-time analytics",
+    "Product complexity",
+    "Market risk: competitors launching similar analytics features"
+  ],
+  "opportunities": [
+    "Enterprise Integration: unlocking 20+ enterprise deals",
+    "Analytics Upsell: generating $50K-$100K in MRR",
+    "Mobile-First Customers: penetrating new verticals like field services and retail"
+  ],
+  "action_items": [
+    {
+      "task": "Finalize analytics dashboard designs",
+      "owner": "Alex",
+      "deadline": "January 29th",
+      "status": "open"
+    },
+    {
+      "task": "Investigate database scaling options and provide cost estimate",
+      "owner": "Marcus",
+      "deadline": "February 2nd",
+      "status": "open"
+    },
+    {
+      "task": "Create onboarding tutorial scripts for new features",
+      "owner": "Emily",
+      "deadline": "February 5th",
+      "status": "open"
+    },
+    {
+      "task": "Draft sales collateral highlighting AI-powered insights differentiation",
+      "owner": "David",
+      "deadline": "February 10th",
+      "status": "open"
+    },
+    {
+      "task": "Assign engineering pods to each Q1 feature and create detailed sprint plans",
+      "owner": "Marcus",
+      "deadline": "",
+      "status": "open"
+    }
+  ],
+  "sentiment": "positive"
+}

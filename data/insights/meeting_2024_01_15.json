@@ -1,0 +1,62 @@
+{
+  "filename": "meeting_2024_01_15.txt",
+  "date": "2026-01-23T11:16:16.227085",
+  "file_type": ".txt",
+  "character_count": 2925,
+  "word_count": 450,
+  "summary": "The quarterly planning meeting discussed Q4 2023 performance, Q1 2024 roadmap, budget allocation, hiring plans, and key risks and opportunities. The company exceeded revenue targets and reduced customer acquisition costs. However, concerns were raised about engineering team capacity and competitive pressure.",
+  "topics": [
+    "Q4 2023 Performance Review",
+    "Q1 2024 Roadmap",
+    "Budget Allocation",
+    "Hiring Plans",
+    "Key Risks & Opportunities",
+    "Engineering Roadmap",
+    "Financial Update",
+    "Product Strategy",
+    "Competitive Analysis"
+  ],
+  "risks": [
+    "Engineering team capacity constraints",
+    "Increased customer churn rate",
+    "Competitive pressure from TechFlow Inc."
+  ],
+  "opportunities": [
+    "Expanding into the healthcare vertical",
+    "Shipping HIPAA compliance features",
+    "Landing 10-15 new healthcare customers"
+  ],
+  "action_items": [
+    {
+      "task": "Post job descriptions for 2 senior backend engineers and 1 frontend engineer",
+      "owner": "Marcus",
+      "deadline": "January 20th",
+      "status": "open"
+    },
+    {
+      "task": "Create a detailed spec for HIPAA features",
+      "owner": "David",
+      "deadline": "January 25th",
+      "status": "open"
+    },
+    {
+      "task": "Analyze churn data and present findings",
+      "owner": "Jennifer",
+      "deadline": "Next week's leadership meeting",
+      "status": "open"
+    },
+    {
+      "task": "Finalize Q1 marketing budget allocation",
+      "owner": "Jennifer",
+      "deadline": "January 22nd",
+      "status": "open"
+    },
+    {
+      "task": "Prepare a competitive analysis of TechFlow Inc.",
+      "owner": "David",
+      "deadline": "January 30th",
+      "status": "open"
+    }
+  ],
+  "sentiment": "positive"
+}

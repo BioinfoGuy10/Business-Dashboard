@@ -1,0 +1,73 @@
+{
+  "filename": "meeting_2024_01_29.txt",
+  "date": "2026-01-23T11:08:22.615641",
+  "file_type": ".txt",
+  "character_count": 4361,
+  "word_count": 666,
+  "summary": "The meeting discussed various risks and mitigation strategies, including engineering capacity constraints, competitive pressure, customer churn, cash runway management, and key hire dependencies. The team agreed on several action items to address these risks. The overall goal is to ensure the company's growth and stability.",
+  "topics": [
+    "Engineering Capacity Constraints",
+    "Competitive Pressure from TechFlow Inc.",
+    "Customer Churn Rate Increase",
+    "Cash Runway Management",
+    "Key Hire Dependencies"
+  ],
+  "risks": [
+    "Engineering capacity constraints",
+    "Competitive pressure from TechFlow Inc.",
+    "Customer churn rate increase",
+    "Cash runway reduction",
+    "Key hire dependencies"
+  ],
+  "opportunities": [
+    "Differentiation through superior customer support",
+    "Advanced analytics capabilities",
+    "HIPAA compliance feature",
+    "Series A fundraise"
+  ],
+  "action_items": [
+    {
+      "task": "Increase salary bands by 15% and offer signing bonuses of $20K for senior hires",
+      "owner": "Rachel",
+      "deadline": "mid-February",
+      "status": "open"
+    },
+    {
+      "task": "Create competitor battle card highlighting differentiators",
+      "owner": "David",
+      "deadline": null,
+      "status": "open"
+    },
+    {
+      "task": "Ship simplified onboarding by February 20th",
+      "owner": "Emily",
+      "deadline": "February 20th",
+      "status": "open"
+    },
+    {
+      "task": "Post customer success manager roles by February 1st",
+      "owner": "Rachel",
+      "deadline": "February 1st",
+      "status": "open"
+    },
+    {
+      "task": "Build Series A investor deck",
+      "owner": "Jennifer",
+      "deadline": "March 1st",
+      "status": "open"
+    },
+    {
+      "task": "Identify 2-3 trusted contractor firms",
+      "owner": "Marcus",
+      "deadline": null,
+      "status": "open"
+    },
+    {
+      "task": "Engage recruiting agency for senior engineering roles",
+      "owner": "Rachel",
+      "deadline": "February 15th",
+      "status": "open"
+    }
+  ],
+  "sentiment": "neutral"
+}
