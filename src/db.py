@@ -62,11 +62,25 @@ def init_db():
         author_id INTEGER,
         type TEXT NOT NULL,
         content TEXT NOT NULL,
+        custom_emoji TEXT,
         target_user_id INTEGER,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (workspace_id) REFERENCES workspaces (id),
         FOREIGN KEY (author_id) REFERENCES users (id),
         FOREIGN KEY (target_user_id) REFERENCES users (id)
+    )
+    ''') 
+    
+    # Post Reactions table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS post_reactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER,
+        user_id INTEGER,
+        emoji TEXT NOT NULL,
+        FOREIGN KEY (post_id) REFERENCES posts (id),
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        UNIQUE(post_id, user_id, emoji)
     )
     ''')
     
@@ -87,6 +101,15 @@ def init_db():
     ''')
     
     conn.commit()
+    
+    # Migrations
+    cursor.execute("PRAGMA table_info(posts)")
+    columns = [info[1] for info in cursor.fetchall()]
+    if 'custom_emoji' not in columns:
+        print("Migrating: Adding custom_emoji to posts table...")
+        cursor.execute("ALTER TABLE posts ADD COLUMN custom_emoji TEXT")
+        conn.commit()
+        
     conn.close()
 
 def hash_password(password):
@@ -216,14 +239,14 @@ def join_workspace_by_invite(user_id, invite_code):
     finally:
         conn.close()
 
-def create_post(workspace_id, author_id, post_type, content, target_user_id=None):
+def create_post(workspace_id, author_id, post_type, content, target_user_id=None, custom_emoji=None):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute("""
-            INSERT INTO posts (workspace_id, author_id, type, content, target_user_id)
-            VALUES (?, ?, ?, ?, ?)
-        """, (workspace_id, author_id, post_type, content, target_user_id))
+            INSERT INTO posts (workspace_id, author_id, type, content, target_user_id, custom_emoji)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (workspace_id, author_id, post_type, content, target_user_id, custom_emoji))
         conn.commit()
         return True
     except Exception as e:
@@ -247,6 +270,53 @@ def get_workspace_posts(workspace_id):
     posts = cursor.fetchall()
     conn.close()
     return posts
+
+def toggle_reaction(post_id, user_id, emoji):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        # Check if exists
+        cursor.execute("SELECT id FROM post_reactions WHERE post_id=? AND user_id=? AND emoji=?", (post_id, user_id, emoji))
+        existing = cursor.fetchone()
+        
+        if existing:
+            # Remove
+            cursor.execute("DELETE FROM post_reactions WHERE id=?", (existing[0],))
+            result = "removed"
+        else:
+            # Add
+            cursor.execute("INSERT INTO post_reactions (post_id, user_id, emoji) VALUES (?, ?, ?)", (post_id, user_id, emoji))
+            result = "added"
+            
+        conn.commit()
+        return True, result
+    except Exception as e:
+        print(f"Error toggling reaction: {e}")
+        return False, str(e)
+    finally:
+        conn.close()
+
+def get_post_reactions(post_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT pr.emoji, u.name as user_name, u.id as user_id
+        FROM post_reactions pr
+        JOIN users u ON pr.user_id = u.id
+        WHERE pr.post_id = ?
+    """, (post_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    
+    # Aggegate results: {'👍': {'count': 2, 'users': ['Alice', 'Bob'], 'user_ids': [1, 2]}}
+    reactions = {}
+    for emoji, name, uid in rows:
+        if emoji not in reactions:
+            reactions[emoji] = {'count': 0, 'users': [], 'user_ids': []}
+        reactions[emoji]['count'] += 1
+        reactions[emoji]['users'].append(name)
+        reactions[emoji]['user_ids'].append(uid)
+    return reactions
 
 def get_user_stats(user_id, workspace_id):
     conn = sqlite3.connect(DB_PATH)

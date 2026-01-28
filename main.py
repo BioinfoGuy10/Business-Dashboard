@@ -185,28 +185,55 @@ def page_workspace():
             
             st.markdown("---")
             st.subheader("Share an Update")
-            with st.form("post_form", clear_on_submit=True):
-                post_type = st.selectbox("Type", ["Praise", "Credit", "Update"])
-                content = st.text_area("What's on your mind?")
-                
-                target_user_id = None
-                if post_type in ["Praise", "Credit"]:
-                    members = db.get_workspace_members(ws['id'])
-                    member_options = {m['name']: m['id'] for m in members if m['id'] != st.session_state.user['id']}
-                    if member_options:
-                        tagged_name = st.selectbox("Tag Teammate (Optional)", ["None"] + list(member_options.keys()))
-                        if tagged_name != "None":
-                            target_user_id = member_options[tagged_name]
-                
-                submitted = st.form_submit_button("Post")
-                if submitted:
-                    if content:
-                        success = db.create_post(ws['id'], st.session_state.user['id'], post_type.lower(), content, target_user_id)
-                        if success:
-                            st.success("Post shared!")
-                            # Refresh or show success message
+            st.subheader("Share an Update")
+            
+            # Using columns to organize inputs
+            post_type = st.selectbox("Type", ["Praise", "Credit", "Update"])
+            
+            target_user_id = None
+            if post_type in ["Praise", "Credit"]:
+                members = db.get_workspace_members(ws['id'])
+                member_options = {m['name']: m['id'] for m in members if m['id'] != st.session_state.user['id']}
+                if member_options:
+                    tagged_name = st.selectbox("Tag Teammate (Optional)", ["None"] + list(member_options.keys()))
+                    if tagged_name != "None":
+                        target_user_id = member_options[tagged_name]
+            
+            if 'post_content' not in st.session_state:
+                st.session_state.post_content = ""
+
+            def add_emoji(e):
+                st.session_state.post_content += f" {e}"
+
+            content = st.text_area("What's on your mind?", key="post_content")
+
+            # Emoji Insertion
+            st.write("**Add Emojis:**")
+            mood_emojis = ["👍", "🎉", "🏅", "📢", "🔥", "🚀", "💡", "❤️", "😂", "👀"]
+            emoji_cols = st.columns(len(mood_emojis))
+            for i, emoji in enumerate(mood_emojis):
+                emoji_cols[i].button(emoji, key=f"add_{emoji}", on_click=add_emoji, args=(emoji,))
+
+            def submit_post(ws_id, user_id, type_val, target_uid):
+                content_val = st.session_state.post_content
+                if content_val:
+                    success = db.create_post(ws_id, user_id, type_val, content_val, target_uid)
+                    if success:
+                        st.session_state.post_success = True
+                        st.session_state.post_content = "" # Clear after post
                     else:
-                        st.warning("Please enter some content.")
+                        st.session_state.post_error = "Failed to create post."
+                else:
+                    st.session_state.post_error = "Please enter some content."
+
+            if st.button("Post", type="primary", on_click=submit_post, args=(ws['id'], st.session_state.user['id'], post_type.lower(), target_user_id)):
+                # Handle UI feedback after rerun
+                if st.session_state.get('post_success'):
+                    st.success("Post shared!")
+                    st.session_state.post_success = False # Reset
+                if st.session_state.get('post_error'):
+                    st.warning(st.session_state.post_error)
+                    st.session_state.post_error = None # Reset
             
             st.markdown("---")
             st.subheader("📣 Feed")
@@ -233,7 +260,10 @@ def page_workspace():
             if posts:
                 for p in posts:
                     # Determine emoji and styling
-                    emoji = "🎉" if p['type'] == 'praise' else "🏅" if p['type'] == 'credit' else "📢"
+                    if p['custom_emoji']:
+                        emoji = p['custom_emoji']
+                    else:
+                        emoji = "🎉" if p['type'] == 'praise' else "🏅" if p['type'] == 'credit' else "📢"
                     
                     # Highlight if mentioning current user
                     is_mention = p['target_user_id'] == st.session_state.user['id']
@@ -253,6 +283,8 @@ def page_workspace():
                                 st.markdown(f"🎯 *Tagged: {p['target_name']}*")
                             st.write(p['content'])
                             st.caption(f"{p['timestamp']}")
+                        
+                        # Reactions - REMOVED per user request
                         st.markdown("---")
             else:
                 st.info("No posts yet. Be the first to share something!")
@@ -955,6 +987,7 @@ def page_intelligence():
 
 def main():
     """Main application."""
+    db.init_db()  # Ensure DB is initialized/migrated
     init_session_state()
     
     # Check authentication
