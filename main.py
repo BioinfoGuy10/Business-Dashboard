@@ -12,13 +12,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 import time
 
-# Add src to path
-sys.path.append(str(Path(__file__).parent))
-
-# Import local modules
-from src import db, summarizer, ingestion, analysis, embedding_store, trends, intelligence, reports
-import config
-
 # Page configuration
 st.set_page_config(
     page_title="Business Transcript Analyzer",
@@ -26,6 +19,13 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Add src to path
+sys.path.append(str(Path(__file__).parent))
+
+# Import local modules
+from src import db, summarizer, ingestion, analysis, embedding_store, trends, intelligence, reports
+import config
 
 # Custom CSS for better styling
 st.markdown("""

@@ -10,6 +10,29 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Streamlit Secrets Support
+import streamlit as st
+
+def get_config(key, default=None):
+    """Get configuration from env vars or streamlit secrets."""
+    # 1. Try environment variable
+    value = os.getenv(key)
+    if value is not None:
+        return value
+    
+    # 2. Try Streamlit secrets
+    try:
+        if key in st.secrets:
+            return st.secrets[key]
+        # Check for nested secrets (e.g. OPENAI.API_KEY)
+        parts = key.split('_')
+        if len(parts) > 1 and parts[0] in st.secrets and '_'.join(parts[1:]) in st.secrets[parts[0]]:
+             return st.secrets[parts[0]]['_'.join(parts[1:])]
+    except:
+        pass
+        
+    return default
+
 # Base Paths
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
@@ -23,28 +46,28 @@ for dir_path in [TRANSCRIPTS_DIR, INSIGHTS_DIR, VECTOR_STORE_DIR, EXAMPLES_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)
 
 # LLM Configuration
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # "openai" or "ollama"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")  # Custom base URL for Groq or other APIs
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama2")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+LLM_PROVIDER = get_config("LLM_PROVIDER", "openai")  # "openai" or "ollama"
+OPENAI_API_KEY = get_config("OPENAI_API_KEY")
+OPENAI_BASE_URL = get_config("OPENAI_BASE_URL")  # Custom base URL for Groq or other APIs
+OPENAI_MODEL = get_config("OPENAI_MODEL", "gpt-4-turbo-preview")
+OLLAMA_MODEL = get_config("OLLAMA_MODEL", "llama2")
+OLLAMA_BASE_URL = get_config("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Embedding Configuration
-EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local")  # Default to local now
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")  # Fast local model
-OPENAI_EMBEDDING_BASE_URL = os.getenv("OPENAI_EMBEDDING_BASE_URL")  # Separate for embeddings
+EMBEDDING_PROVIDER = get_config("EMBEDDING_PROVIDER", "local")  # Default to local now
+EMBEDDING_MODEL = get_config("EMBEDDING_MODEL", "all-MiniLM-L6-v2")  # Fast local model
+OPENAI_EMBEDDING_BASE_URL = get_config("OPENAI_EMBEDDING_BASE_URL")  # Separate for embeddings
 
 # Vector Store Configuration
-VECTOR_STORE_TYPE = os.getenv("VECTOR_STORE_TYPE", "faiss")  # "faiss" or "chroma"
+VECTOR_STORE_TYPE = get_config("VECTOR_STORE_TYPE", "faiss")  # "faiss" or "chroma"
 FAISS_INDEX_PATH = VECTOR_STORE_DIR / "index.faiss"
 FAISS_METADATA_PATH = VECTOR_STORE_DIR / "metadata.pkl"
 
 # News API Configuration
-NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+NEWS_API_KEY = get_config("NEWS_API_KEY")
 
 # Processing Configuration
-MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", "10"))
+MAX_FILE_SIZE_MB = int(get_config("MAX_FILE_SIZE_MB", "10"))
 SUPPORTED_FORMATS = [".txt", ".pdf", ".docx"]
 
 # Validation
