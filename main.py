@@ -9,14 +9,14 @@ from pathlib import Path
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent))
 
 # Import local modules
-from src import ingestion, analysis, embedding_store, trends, intelligence, db
+from src import db, summarizer, ingestion, analysis, embedding_store, trends, intelligence, reports
 import config
 
 # Page configuration
@@ -164,8 +164,34 @@ def page_workspace():
         ws = st.session_state.active_workspace
         st.subheader(f"Workspace: {ws['name']}")
         
-        tabs = st.tabs(["Feed", "My Work Notes", "Team Work Updates", "Members", "Settings"])
+        tabs = st.tabs(["Feed", "My Work Notes", "Team Work Updates", "Members", "Settings", "Weekly Summary"])
         
+        with tabs[5]:
+            st.markdown("### 📅 Weekly Team Summary")
+            
+            # Simple date range for current week
+            today = datetime.now().date()
+            start_of_week = today - timedelta(days=today.weekday())
+            end_of_week = start_of_week + timedelta(days=6)
+            
+            st.write(f"**Week:** {start_of_week} to {end_of_week}")
+            
+            if st.button("Generate This Week's Summary"):
+                with st.spinner("Analyzing team vibe..."):
+                    summary = summarizer.generate_weekly_summary_text(ws['id'], start_of_week, end_of_week)
+                    db.create_weekly_summary(ws['id'], start_of_week, end_of_week, summary)
+                    st.success("Summary generated!")
+                    st.rerun()
+            
+            # Display latest summary
+            summaries = db.get_weekly_summaries(ws['id'])
+            if summaries:
+                latest = summaries[0]
+                st.markdown(latest['summary_markdown'])
+                st.caption(f"Generated on {latest['created_at']}")
+            else:
+                st.info("No summary generated for this week yet.")
+
         with tabs[0]:
             # My Stats Section
             st.subheader("📊 My Stats")
@@ -296,24 +322,34 @@ def page_workspace():
             # New Note Form
             with st.form("new_work_note_form", clear_on_submit=True):
                 raw_notes = st.text_area("Rough Project Notes", placeholder="e.g., finished the auth module, fixed 3 bugs in login, started work on workspaces schema...")
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     save_draft = st.form_submit_button("💾 Save as Draft")
                 with col2:
                     gen_desc = st.form_submit_button("🪄 Generate Description")
+                with col3:
+                    publish_now = st.form_submit_button("🚀 Publish Now", type="primary")
                 
-                if save_draft or gen_desc:
+                if save_draft or gen_desc or publish_now:
                     if raw_notes:
                         note_id = db.create_work_note(ws['id'], st.session_state.user['id'], raw_notes)
                         if note_id:
-                            if gen_desc:
+                            if publish_now:
+                                # Generate description and publish immediately
+                                with st.spinner("Publishing your update..."):
+                                    suggestion = analysis.synthesize_work_update(raw_notes)
+                                    db.update_work_note(note_id, generated_description=suggestion, final_accepted_description=suggestion, status='published')
+                                st.success("✨ Published to Team Work Updates!")
+                                st.rerun()
+                            elif gen_desc:
                                 with st.spinner("Synthesizing professional update..."):
                                     suggestion = analysis.synthesize_work_update(raw_notes)
                                     db.update_work_note(note_id, generated_description=suggestion)
                                 st.success("✨ AI Suggestion generated!")
+                                st.rerun()
                             else:
                                 st.success("💾 Draft saved!")
-                            st.rerun()
+                                st.rerun()
                     else:
                         st.warning("⚠️ Please enter some notes first.")
             
@@ -352,6 +388,112 @@ def page_workspace():
         with tabs[2]:
             st.subheader("🚀 Team Work Updates")
             st.write("Professional updates shared by the team.")
+            
+            # Report Download Section
+            st.markdown("### 📥 Download Reports")
+            st.write("Generate and download reports of team work updates for specific time periods.")
+            
+            col1, col2, col3 = st.columns([2, 2, 1])
+            
+            with col1:
+                date_preset = st.selectbox(
+                    "Select Time Period",
+                    ["This Week", "Last Week", "This Month", "Last Month", "Custom Range"],
+                    key="report_date_preset"
+                )
+            
+            with col2:
+                export_format = st.radio(
+                    "Export Format",
+                    ["CSV", "PDF"],
+                    horizontal=True,
+                    key="report_format"
+                )
+            
+            # Handle custom date range
+            start_date = None
+            end_date = None
+            
+            if date_preset == "Custom Range":
+                col_start, col_end = st.columns(2)
+                with col_start:
+                    start_date = st.date_input("Start Date", key="custom_start")
+                with col_end:
+                    end_date = st.date_input("End Date", key="custom_end")
+                
+                if start_date and end_date:
+                    start_date = datetime.combine(start_date, datetime.min.time())
+                    end_date = datetime.combine(end_date, datetime.max.time())
+            else:
+                # Use preset
+                preset_map = {
+                    "This Week": "this_week",
+                    "Last Week": "last_week",
+                    "This Month": "this_month",
+                    "Last Month": "last_month"
+                }
+                start_date, end_date = reports.get_date_range_presets(preset_map[date_preset])
+            
+            # Generate report button
+            if start_date and end_date:
+                if st.button("📊 Generate Report", type="primary", use_container_width=True):
+                    with st.spinner("Generating report..."):
+                        # Get work notes for the date range
+                        work_notes = db.get_work_notes_by_date_range(ws['id'], start_date, end_date)
+                        
+                        if work_notes:
+                            # Convert sqlite3.Row to dict for processing
+                            notes_list = [dict(note) for note in work_notes]
+                            
+                            # Generate AI summary of team work
+                            with st.spinner("🤖 AI is analyzing team work..."):
+                                ai_summary = summarizer.generate_team_work_summary(notes_list, start_date, end_date)
+                            
+                            # Generate report data
+                            report_data = reports.generate_report_data(notes_list)
+                            
+                            # Generate file based on format
+                            if export_format == "CSV":
+                                csv_content = reports.export_to_csv(
+                                    report_data, 
+                                    ws['name'], 
+                                    start_date, 
+                                    end_date,
+                                    ai_summary
+                                )
+                                filename = f"work_updates_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+                                
+                                st.download_button(
+                                    label="⬇️ Download CSV Report",
+                                    data=csv_content,
+                                    file_name=filename,
+                                    mime="text/csv",
+                                    use_container_width=True
+                                )
+                                st.success(f"✅ Report generated! Found {report_data['total_updates']} updates from {report_data['active_contributors']} contributors.")
+                            
+                            else:  # PDF
+                                pdf_content = reports.export_to_pdf(
+                                    report_data, 
+                                    ws['name'], 
+                                    start_date, 
+                                    end_date,
+                                    ai_summary
+                                )
+                                filename = f"work_updates_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
+                                
+                                st.download_button(
+                                    label="⬇️ Download PDF Report",
+                                    data=pdf_content,
+                                    file_name=filename,
+                                    mime="application/pdf",
+                                    use_container_width=True
+                                )
+                                st.success(f"✅ Report generated! Found {report_data['total_updates']} updates from {report_data['active_contributors']} contributors.")
+                        else:
+                            st.warning(f"⚠️ No work updates found for the period {start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}.")
+            
+            st.markdown("---")
             
             published_notes = db.get_workspace_published_notes(ws['id'])
             
@@ -1003,6 +1145,24 @@ def main():
 
     # Sidebar navigation
     st.sidebar.title("🎯 Navigation")
+    # User Profile Section
+    with st.sidebar.expander("👤 User Profile"):
+        with st.form("profile_form"):
+            new_name = st.text_input("Name", value=st.session_state.user['name'])
+            new_email = st.text_input("Email", value=st.session_state.user['email'])
+            
+            if st.form_submit_button("Update Profile"):
+                if new_name and new_email:
+                    if db.update_user(st.session_state.user['id'], new_name, new_email):
+                        st.session_state.user['name'] = new_name
+                        st.session_state.user['email'] = new_email
+                        st.success("Profile updated!")
+                        st.rerun()
+                    else:
+                        st.error("Failed to update profile.")
+                else:
+                    st.warning("Name and Email are required.")
+
     st.sidebar.markdown(f"**User:** {st.session_state.user['name']}")
     
     # Workspace Selection in Sidebar

@@ -99,6 +99,33 @@ def init_db():
         FOREIGN KEY (workspace_id) REFERENCES workspaces (id)
     )
     ''')
+
+    # Weekly Summaries table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS weekly_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id INTEGER,
+        week_start DATE,
+        week_end DATE,
+        summary_markdown TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (workspace_id) REFERENCES workspaces (id)
+    )
+    ''')
+    
+    conn.commit()
+    # Weekly Summaries table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS weekly_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        workspace_id INTEGER,
+        week_start DATE,
+        week_end DATE,
+        summary_markdown TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (workspace_id) REFERENCES workspaces (id)
+    )
+    ''')
     
     conn.commit()
     
@@ -109,8 +136,27 @@ def init_db():
         print("Migrating: Adding custom_emoji to posts table...")
         cursor.execute("ALTER TABLE posts ADD COLUMN custom_emoji TEXT")
         conn.commit()
-        
+
     conn.close()
+
+def create_weekly_summary(workspace_id, start_date, end_date, summary_text):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO weekly_summaries (workspace_id, week_start, week_end, summary_markdown)
+        VALUES (?, ?, ?, ?)
+    ''', (workspace_id, start_date, end_date, summary_text))
+    conn.commit()
+    conn.close()
+
+def get_weekly_summaries(workspace_id):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM weekly_summaries WHERE workspace_id = ? ORDER BY week_start DESC', (workspace_id,))
+    summaries = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return summaries
 
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -139,6 +185,29 @@ def get_user_by_email(email):
     user = cursor.fetchone()
     conn.close()
     return user
+
+
+def update_user(user_id, name, email):
+    """
+    Update user profile information.
+    
+    Args:
+        user_id: ID of the user to update
+        name: New name
+        email: New email
+    """
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('UPDATE users SET name = ?, email = ? WHERE id = ?', (name, email, user_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating user: {e}")
+        return False
+    finally:
+        conn.close()
 
 def create_workspace(name, admin_id):
     conn = sqlite3.connect(DB_PATH)
@@ -405,6 +474,40 @@ def get_workspace_published_notes(workspace_id):
         WHERE n.workspace_id = ? AND n.status = 'published'
         ORDER BY n.created_at DESC
     """, (workspace_id,))
+    notes = cursor.fetchall()
+    conn.close()
+    return notes
+
+def get_work_notes_by_date_range(workspace_id, start_date, end_date):
+    """
+    Get published work notes within a specific date range.
+    
+    Args:
+        workspace_id: ID of the workspace
+        start_date: Start date (datetime object)
+        end_date: End date (datetime object)
+        
+    Returns:
+        List of work note records within the date range
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Convert datetime to string format for SQLite comparison
+    start_str = start_date.strftime('%Y-%m-%d 00:00:00')
+    end_str = end_date.strftime('%Y-%m-%d 23:59:59')
+    
+    cursor.execute("""
+        SELECT n.*, u.name as author_name
+        FROM work_notes n
+        JOIN users u ON n.author_id = u.id
+        WHERE n.workspace_id = ? 
+        AND n.status = 'published'
+        AND n.created_at BETWEEN ? AND ?
+        ORDER BY n.created_at DESC
+    """, (workspace_id, start_str, end_str))
+    
     notes = cursor.fetchall()
     conn.close()
     return notes
