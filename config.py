@@ -22,15 +22,38 @@ def get_config(key, default=None):
     
     # 2. Try Streamlit secrets
     try:
+        # Direct match
         if key in st.secrets:
             return st.secrets[key]
+            
+        # Case-insensitive match for root keys
+        # e.g. 'openai_api_key' in secrets maps to 'OPENAI_API_KEY' request
+        for secret_key in st.secrets:
+            if secret_key.lower() == key.lower():
+                return st.secrets[secret_key]
+
         # Check for nested secrets (e.g. OPENAI.API_KEY)
         parts = key.split('_')
-        if len(parts) > 1 and parts[0] in st.secrets and '_'.join(parts[1:]) in st.secrets[parts[0]]:
-             return st.secrets[parts[0]]['_'.join(parts[1:])]
-    except:
-        pass
+        if len(parts) > 1:
+            section = parts[0]
+            subsection = '_'.join(parts[1:])
+            
+            # Check for section match (case-insensitive)
+            for secret_section in st.secrets:
+                if secret_section.lower() == section.lower():
+                    # Check for subsection match in this section
+                    section_data = st.secrets[secret_section]
+                    if isinstance(section_data, dict): # Ensure it is a dict
+                         if subsection in section_data:
+                             return section_data[subsection]
+                         # Case-insensitive subsection
+                         for sub_key in section_data:
+                             if sub_key.lower() == subsection.lower():
+                                 return section_data[sub_key]
+    except Exception as e:
+        print(f"Error accessing secrets for {key}: {e}")
         
+    print(f"⚠️ Config key '{key}' not found in env or secrets.")
     return default
 
 # Base Paths
@@ -49,7 +72,7 @@ for dir_path in [TRANSCRIPTS_DIR, INSIGHTS_DIR, VECTOR_STORE_DIR, EXAMPLES_DIR]:
 LLM_PROVIDER = get_config("LLM_PROVIDER", "openai")  # "openai" or "ollama"
 OPENAI_API_KEY = get_config("OPENAI_API_KEY")
 OPENAI_BASE_URL = get_config("OPENAI_BASE_URL")  # Custom base URL for Groq or other APIs
-OPENAI_MODEL = get_config("OPENAI_MODEL", "gpt-4-turbo-preview")
+OPENAI_MODEL = get_config("OPENAI_MODEL", "gpt-3.5-turbo")
 OLLAMA_MODEL = get_config("OLLAMA_MODEL", "llama2")
 OLLAMA_BASE_URL = get_config("OLLAMA_BASE_URL", "http://localhost:11434")
 
